@@ -143,7 +143,8 @@ def train_FashionData():
         model = model.cuda()
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    # 设置了momentum的SGD比未设置的效果好多了。
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.8)
 
     loss_data = []
     for e in range(epoch):
@@ -207,6 +208,6 @@ def train_FashionData():
 
 
 # load_data(batch_size=256, display=True)
-# train_FashionData()
+train_FashionData()
 test_FashionNet()
 
