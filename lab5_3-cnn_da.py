@@ -12,8 +12,6 @@ import random
 import common as comm
 import albumentations
 
-MODEL_NAME = "./Modules/lenet_fashion_mnist.pth"
-
 
 # 测试data augmentation
 def test_da():

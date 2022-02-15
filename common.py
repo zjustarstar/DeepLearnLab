@@ -20,7 +20,7 @@ def show_imgs(imgs, titles, cols_num):
         plt.gca().get_xaxis().set_visible(False)
         plt.gca().axes.get_yaxis().set_visible(False)
         plt.imshow(img)
-        if titles[i]:
+        if len(str(titles[i])):
             plt.title(titles[i])
     plt.show()
 
