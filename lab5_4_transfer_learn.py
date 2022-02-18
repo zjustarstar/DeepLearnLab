@@ -114,10 +114,6 @@ def fine_tune_train():
 # model.load_state_dict(torch.load("./Modules/pretrained_resnet18.pth"))
 
 def test_model():
-    batch_size = 20
-    _, test_data = load_data()
-    test_iter = Data.DataLoader(test_data, batch_size=batch_size, shuffle=True)
-
     input_imgsize = 224
     # 定义数据增强
     trans_norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -129,6 +125,7 @@ def test_model():
         trans_norm
     ])
 
+    # 随便读取前10个正负类图片
     posdir = "./Datasets/hotdog/test/hotdog/"
     negdir = "./Datasets/hotdog/test/not-hotdog/"
     posfile = [posdir + str(i)+".png" for i in range(1000, 1010, 1)]
@@ -145,9 +142,8 @@ def test_model():
     result = []
     for i in range(len(features)):
         with torch.no_grad():
-            f = features[i]
-            f = f.unsqueeze(0)
-            y_hat = model(f)
+            # 输入必须是N*C*H*W, featuresp[i]的结构是C*H*W
+            y_hat = model(features[i].unsqueeze(0))
             _, y_pred = torch.max(y_hat, 1)
             if y_pred.item()==0:
                 result.append("hotdog")
@@ -156,6 +152,8 @@ def test_model():
 
     comm.show_imgs(imgs, result, 4)
 
-test_model()
+
+load_data(True)
+# test_model()
 
 
