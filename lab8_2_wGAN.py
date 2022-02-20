@@ -110,7 +110,7 @@ class discriminator(nn.Module):
             nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.2),
             nn.Linear(1024, self.out_dim),
-            nn.Sigmoid(),
+            # nn.Sigmoid(),
         )
         # 初始化网络权重
         comm.initialize_weights(self)
@@ -153,15 +153,12 @@ def train_gan():
     # data_shape[1] = C, data_shape[2] = H 假设宽和高一样
     D = discriminator(input_dim=data_shape[1], out_dim=1, input_size=data_shape[2])
     G = generator(input_dim=z_dim, out_dim=data_shape[1], input_size=data_shape[2])
-    criterion = nn.BCELoss()
     optimizer_D = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
     optimizer_G = optim.Adam(G.parameters(), lr=lr, betas=(0.5, 0.999))
 
     # 记录每个epoch的网络损失
     GLoss = []
     DLoss = []
-    real_label = torch.ones(batch_size, 1)
-    fake_label = torch.zeros(batch_size, 1)
 
     print("*"*20 + "start training" + "*"*20)
     D.train()
