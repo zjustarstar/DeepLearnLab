@@ -144,7 +144,7 @@ def train_gan():
 
     # clipping value
     clip_c = 0.01
-    nCritic = 3
+    nCritic = 1
 
     # 定义网络和优化器等
     train_iter, _ = load_data(batch_size, False)
@@ -187,7 +187,7 @@ def train_gan():
             # 虚假样本的平均D(G(z))值,从0开始, 最终升到0.5左右最佳
             D_G_Z1= D_z_out.mean().item()
 
-            L_D = torch.div(D_real_loss + D_fake_loss, 2)
+            L_D = D_real_loss + D_fake_loss
             L_D.backward()
             optimizer_D.step()
 
@@ -205,11 +205,13 @@ def train_gan():
                 optimizer_G.step()
                 D_G_Z2 = D_fake_out.mean().item()
 
+                GLoss.append(L_G.item())
+                G_loss_epoch += L_G.item()
+
             # 记录损失
             DLoss.append(L_D.item())
-            GLoss.append(L_G.item())
+
             # 记录epoch内平均每个batch的损失
-            G_loss_epoch += L_G.item()
             D_loss_epoch += L_D.item()
 
             if (step+1) % 50 == 0:
