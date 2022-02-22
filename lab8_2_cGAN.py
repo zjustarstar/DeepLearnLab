@@ -57,7 +57,8 @@ def load_data(batch_size=256, display=False):
 
 
 class generator(nn.Module):
-    def __init__(self, input_dim=100, out_dim=1, input_size=32, class_num=10):
+    def __init__(self, input_dim=100, out_dim=1,
+                 input_size=32, class_num=10):
         super(generator, self).__init__()
         self.input_dim = input_dim
         self.out_dim = out_dim
@@ -91,7 +92,8 @@ class generator(nn.Module):
 
 
 class discriminator(nn.Module):
-    def __init__(self, input_dim=1, out_dim=1, input_size=32, class_num=10):
+    def __init__(self, input_dim=1, out_dim=1,
+                 input_size=32, class_num=10):
         super(discriminator, self).__init__()
         self.input_dim = input_dim
         self.input_size = input_size
