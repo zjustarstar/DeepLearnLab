@@ -13,7 +13,6 @@ import os
 import numpy as np
 import random
 import common as comm
-import albumentations
 
 
 MODEL_NAME = "./Modules/cGAN.pth"
@@ -129,11 +128,16 @@ def save_image(G, z_dim, epoch):
     # 每个批次生成多少张同类型的图
     batch_size = 5
     z = torch.rand((batch_size, z_dim))
+    if torch.cuda.is_available():
+        z = z.cuda()
 
     # 每批次生成同一个标签的各batch_size个
     for n in range(10):
         label_index = torch.ones(batch_size, 1) * n
         y = torch.zeros((batch_size, class_num)).scatter_(1, label_index.type(torch.LongTensor), 1)
+        if torch.cuda.is_available():
+            y = y.cuda()
+
         out = G(z, y)
         images = list(map(transforms.ToPILImage(), out))
         for i in range(len(images)):
@@ -142,12 +146,14 @@ def save_image(G, z_dim, epoch):
 
 
 def train_gan():
+    use_gpu = torch.cuda.is_available()
+
     # 超参
     batch_size = 200
-    lr = 0.0001
+    lr = 0.0005
     # 潜变量维度
-    z_dim = 70
-    epoch = 30
+    z_dim = 100
+    epoch = 50
     # 类型个数
     class_num = 10
 
@@ -168,12 +174,19 @@ def train_gan():
     real_label = torch.ones(batch_size, 1)
     fake_label = torch.zeros(batch_size, 1)
 
+    if use_gpu:
+        D.cuda()
+        G.cuda()
+        real_label = real_label.cuda()
+        fake_label = fake_label.cuda()
+
     print("*"*20 + "start training" + "*"*20)
     D.train()
     for e in range(epoch):
         G.train()
         G_loss_epoch = 0
         D_loss_epoch = 0
+
         for step, (features, labels) in enumerate(train_iter):
 
             # x|y，增加输入的y，即label信息。需要根据结构做尺寸的适应
@@ -185,6 +198,12 @@ def train_gan():
             y_fill_ = y_vec_.unsqueeze(2).unsqueeze(3).\
                 expand(batch_size, class_num, data_shape[2],data_shape[3])
 
+            if use_gpu:
+                features = features.cuda()
+                labels = labels.cuda()
+                y_vec_ = y_vec_.cuda()
+                y_fill_ = y_fill_.cuda()
+
             # ===================判别器网络训练====================
             optimizer_D.zero_grad()
 
@@ -195,6 +214,9 @@ def train_gan():
 
             # 生成随机的潜在变量
             z = torch.randn((batch_size, z_dim))
+            if use_gpu:
+                z = z.cuda()
+
             z_out = G(z, y_vec_)
             D_z_out = D(z_out, y_fill_)
             D_fake_loss = criterion(D_z_out, fake_label)

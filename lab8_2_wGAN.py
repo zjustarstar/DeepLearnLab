@@ -110,7 +110,7 @@ class discriminator(nn.Module):
             nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.2),
             nn.Linear(1024, self.out_dim),
-            nn.Sigmoid(),
+            # nn.Sigmoid(),
         )
         # 初始化网络权重
         comm.initialize_weights(self)
@@ -136,7 +136,7 @@ def save_image(G, z_dim, epoch):
 
 def train_gan():
     # 超参
-    batch_size = 150
+    batch_size = 200
     lr = 0.0005
     # 潜变量维度
     z_dim = 70

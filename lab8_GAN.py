@@ -7,13 +7,11 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 import torch.optim as optim
 import torch.utils.data as Data
-from matplotlib import pyplot as plt
 import PIL.Image as Image
 import os
 import numpy as np
 import random
 import common as comm
-import albumentations
 
 
 MODEL_NAME = "./Modules/GAN.pth"
@@ -126,6 +124,8 @@ def save_image(G, z_dim, epoch):
 
     batch_size = 10
     z = torch.rand((batch_size, z_dim))
+    if torch.cuda.is_available():
+        z = z.cuda()
 
     out = G(z)
     images = list(map(transforms.ToPILImage(), out))
@@ -134,13 +134,13 @@ def save_image(G, z_dim, epoch):
         images[i].save(filename)
 
 
-def train_gan():
+def train_gan(use_gpu=False):
     # 超参
     batch_size = 150
     lr = 0.0005
     # 潜变量维度
     z_dim = 70
-    epoch = 30
+    epoch = 50
 
     # 定义网络和优化器等
     train_iter, _ = load_data(batch_size, False)
@@ -158,6 +158,11 @@ def train_gan():
     DLoss = []
     real_label = torch.ones(batch_size, 1)
     fake_label = torch.zeros(batch_size, 1)
+    if use_gpu:
+        G.cuda()
+        D.cuda()
+        real_label = real_label.cuda()
+        fake_label = fake_label.cuda()
 
     print("*"*20 + "start training" + "*"*20)
     D.train()
@@ -166,6 +171,8 @@ def train_gan():
         G_loss_epoch = 0
         D_loss_epoch = 0
         for step, (features, _) in enumerate(train_iter):
+            if use_gpu:
+                features = features.cuda()
 
             # ===================判别器网络训练====================
             optimizer_D.zero_grad()
@@ -177,6 +184,9 @@ def train_gan():
 
             # 生成随机的潜在变量
             z = torch.randn((batch_size, z_dim))
+            if use_gpu:
+                z = z.cuda()
+
             z_out = G(z)
             D_z_out = D(z_out)
             D_fake_loss = criterion(D_z_out, fake_label)
@@ -219,6 +229,11 @@ def train_gan():
                 save_image(G, z_dim, e)
 
 
-train_gan()
+print(torch.version.cuda)
+use_gpu = torch.cuda.is_available()
+print("gpu available: %s" % use_gpu)
+if use_gpu:
+    print("gpu device count: %d" % torch.cuda.device_count())
+train_gan(use_gpu)
 
 
