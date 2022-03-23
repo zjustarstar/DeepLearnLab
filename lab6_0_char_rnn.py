@@ -17,6 +17,7 @@ MODEL_NAME = "./Modules/6_0_charRnn.pth"
 all_letters = string.ascii_letters + " .,;'"
 n_letters = len(all_letters)
 
+
 # 将Unicode字符串转换为纯ASCII, 感谢https://stackoverflow.com/a/518232/2809427
 def unicodeToAscii(s):
     return ''.join(
@@ -66,6 +67,7 @@ def name2tensor(name, vocab_size):
 class myCharRnn(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(myCharRnn, self).__init__()
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -101,9 +103,31 @@ def iter_examples(lang_category, category_names):
         yield  x, x_tensor
 
 
-def train():
-    epoch_size = 100
-    lr = 0.0005
+def load_checkpoint(lang_types, device):
+    lr = 0.0015
+    p = "./Modules/checkpoint/checkpoint_34.tar"
+
+    module = myCharRnn(n_letters, HIDDEN_SIZE, lang_types)
+    optimizer = optim.SGD(module.parameters(), lr=lr, momentum=0.8)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.8)
+    criterion = nn.CrossEntropyLoss().to(device)
+    epoth_start = 0
+
+    # 如果有checkpoint
+    if os.path.exists(p):
+        print("load checkpoint params")
+        checkpoint = torch.load(p)
+        module.load_state_dict(checkpoint['net'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        epoth_start = checkpoint['epoth'] + 1
+        scheduler.load_state_dict(checkpoint['lr_schedule'])
+    module.to(device)
+
+    return module, optimizer, criterion, scheduler, epoth_start
+
+
+def train(device):
+    epoch_size = 40
 
     # 数据读取
     lang_category, category_names = read_data()
@@ -111,19 +135,23 @@ def train():
     print("lang category:%d" % lang_types)
 
     # 网络
-    module = myCharRnn(n_letters, HIDDEN_SIZE, lang_types)
-    optimizer = optim.SGD(module.parameters(), lr=lr, momentum=0.8)
-    criterion = nn.CrossEntropyLoss()
+    module, optimizer, criterion, scheduler, epoth_start =\
+        load_checkpoint(lang_types, device)
 
     module.train()
     loss_list = []
-    for e in range(epoch_size):
+    for e in range(epoth_start, epoch_size):
         batch_loss = 0
         for ind, (name, lang_index) in enumerate(iter_examples(lang_category, category_names)):
             hstate = torch.zeros(HIDDEN_SIZE)
             name_tensor = name2tensor(name, n_letters)
+
+            hstate, name_tensor = hstate.to(device), name_tensor.to(device)
+            lang_index = lang_index.to(device)
+
             # hstate不参与梯度计算
             hstate = hstate.detach()
+
             # 一个单词一次loss
             for i in range(len(name)):
                 y_hat, hstate = module(name_tensor[i, :], hstate)
@@ -135,22 +163,39 @@ def train():
 
             batch_loss += loss
 
+        scheduler.step()
         loss_list.append(batch_loss/(ind+1))
+        torch.cuda.empty_cache()
 
         if (e+1) % 1 == 0:
-            print("epoth={}, avg batch loss={}".format(e+1, batch_loss/(ind+1)))
+            cur_lr = optimizer.state_dict()['param_groups'][0]['lr']
+            print("epoth={}, avg batch loss={}，lr={}".
+                  format(e+1, batch_loss/(ind+1), cur_lr))
+
+        if (e+1) % 5 == 0:
+            checkpoint = {
+            'net': module.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'epoth': e,
+            'lr_schedule':scheduler.state_dict()
+            }
+            p = "./Modules/checkpoint"
+            if not os.path.isdir(p):
+                os.mkdir(p)
+            torch.save(checkpoint, p + '/checkpoint_%s.tar' % (str(e)))
 
     # 保存模型，画loss曲线;
     torch.save(module.state_dict(), MODEL_NAME)
     common.show_loss_curve(loss_list)
 
 
-def predict(name, lange_category):
+def predict(name):
     if not os.path.exists(MODEL_NAME):
         print("模型文件不存在")
 
+    lang_category, _ = read_data()
     # 加载网络..
-    model = myCharRnn(n_letters, HIDDEN_SIZE, len(lange_category))
+    model = myCharRnn(n_letters, HIDDEN_SIZE, len(lang_category))
     model.load_state_dict(torch.load(MODEL_NAME))
 
     model.eval()
@@ -162,7 +207,13 @@ def predict(name, lange_category):
     k = 3
     y_value, y_index = y_hat.topk(k)
     for i in range(k):
-        category = lange_category[y_index[i]]
+        category = lang_category[y_index[i]]
         print("top {} prediction={}, value={}".format(i+1, category, y_value[i]))
 
-train()
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+if device.type == 'cuda':
+    print("device={}".format(torch.cuda.get_device_name(0)))
+
+train(device)
+# predict('Dreschner')
