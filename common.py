@@ -44,9 +44,19 @@ def show_imgs(imgs, titles, cols_num):
     plt.show()
 
 
+def show_loss_curve(loss_list):
+    plt.plot(range(len(loss_list)), loss_list)
+    plt.xlabel('iterations')
+    plt.ylabel('Loss')
+    plt.show()
+
+
 def test_showImg():
     img = Image.open("bear.jpg")
     imgs = [img, img, img, img, img]
     show_imgs(imgs, ["bear", "bear", "bear", "bear", "bear"], 3)
+
+
+
 
 # test_showImg()

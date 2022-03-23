@@ -150,10 +150,10 @@ def train():
             if state is not None:
                 state = state.detach()
 
-            # print("X={}, Y={}".format(x, y))
-            n_x = x.reshape(1, -1).squeeze().type(torch.int)
-            n_y = y.reshape(1, -1).squeeze().type(torch.int)
-            # 对应的句子
+            # print("X={} \n Y={}".format(x, y))
+            # n_x = x.reshape(1, -1).squeeze().type(torch.int)
+            # n_y = y.reshape(1, -1).squeeze().type(torch.int)
+            # # 对应的句子
             # c1 = ''.join(index2char[i] for i in n_x)
             # c2 = ''.join(index2char[i] for i in n_y)
             # print(c1)
@@ -225,9 +225,9 @@ def predict_online(model, corpus_char, prefix, out_len):
     output_string = ''.join([index2char[ind] for ind in output])
     return output_string
 
-train()
-# output = predict_offline("思念在", 30)
-# print(output)
+# train()
+output = predict_offline("我给你", 20)
+print(output)
 
 
 
