@@ -46,7 +46,7 @@ def read_data():
         lines = open(pathfile, encoding='utf-8').read().strip().split('\n')
         format_lines = [unicodeToAscii(line) for line in lines]
         category_names[lang_name] = format_lines
-
+        print("{} | size = {}".format(lang_name, len(format_lines)))
         #print(category_names['Chinese'][:5])
 
     return lang_category, category_names
@@ -71,10 +71,10 @@ class myCharRnn(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
-        self.i2h = nn.Linear(input_size+hidden_size, hidden_size)
-        self.h2o = nn.Linear(hidden_size, output_size)
-        self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=0)
+        self.i2h = nn.Linear(input_size+hidden_size, hidden_size).to(device)
+        self.h2o = nn.Linear(hidden_size, output_size).to(device)
+        self.relu = nn.ReLU().to(device)
+        self.softmax = nn.Softmax(dim=0).to(device)
 
     def forward(self, x, h):
         h_state = self.i2h(torch.cat((x, h)))
@@ -104,12 +104,12 @@ def iter_examples(lang_category, category_names):
 
 
 def load_checkpoint(lang_types, device):
-    lr = 0.0015
-    p = "./Modules/checkpoint/checkpoint_34.tar"
+    lr = 0.005
+    p = "./Modules/checkpoint/checkpoint_234.tar"
 
     module = myCharRnn(n_letters, HIDDEN_SIZE, lang_types)
     optimizer = optim.SGD(module.parameters(), lr=lr, momentum=0.8)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.8)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.8)
     criterion = nn.CrossEntropyLoss().to(device)
     epoth_start = 0
 
@@ -127,7 +127,7 @@ def load_checkpoint(lang_types, device):
 
 
 def train(device):
-    epoch_size = 40
+    epoch_size = 300
 
     # 数据读取
     lang_category, category_names = read_data()
@@ -189,7 +189,7 @@ def train(device):
     common.show_loss_curve(loss_list)
 
 
-def predict(name):
+def predict(name, device):
     if not os.path.exists(MODEL_NAME):
         print("模型文件不存在")
 
@@ -199,8 +199,8 @@ def predict(name):
     model.load_state_dict(torch.load(MODEL_NAME))
 
     model.eval()
-    name_tensor = name2tensor(name, n_letters)
-    hstate = torch.zeros(HIDDEN_SIZE)
+    name_tensor = name2tensor(name, n_letters).to(device)
+    hstate = torch.zeros(HIDDEN_SIZE).to(device)
     for i in range(len(name)):
         y_hat, hstate = model(name_tensor[i, :], hstate)
 
@@ -215,5 +215,5 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if device.type == 'cuda':
     print("device={}".format(torch.cuda.get_device_name(0)))
 
-train(device)
-# predict('Dreschner')
+# train(device)
+predict('Saliba', device)
